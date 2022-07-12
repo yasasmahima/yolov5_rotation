@@ -15,6 +15,7 @@ from multiprocessing.pool import Pool, ThreadPool
 from pathlib import Path
 from threading import Thread
 from zipfile import ZipFile
+from skimage import io
 
 import cv2
 import numpy as np
@@ -670,13 +671,13 @@ def load_image(self, i):
             im = np.load(npy)
         else:  # read image
             path = self.img_files[i]
-            im = cv2.imread(path)  # BGR
+            im = io.imread(path)  # BGR #todo - update here
             assert im is not None, f'Image Not Found {path}'
         h0, w0 = im.shape[:2]  # orig hw
-        r = self.img_size / max(h0, w0)  # ratio
-        if r != 1:  # if sizes are not equal
-            im = cv2.resize(im, (int(w0 * r), int(h0 * r)),
-                            interpolation=cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR)
+        # r = self.img_size / max(h0, w0)  # ratio
+        # if r != 1:  # if sizes are not equal
+        #     im = cv2.resize(im, (int(w0 * r), int(h0 * r)),
+        #                     interpolation=cv2.INTER_AREA if r < 1 and not self.augment else cv2.INTER_LINEAR)
         return im, (h0, w0), im.shape[:2]  # im, hw_original, hw_resized
     else:
         return self.imgs[i], self.img_hw0[i], self.img_hw[i]  # im, hw_original, hw_resized
@@ -892,17 +893,16 @@ def verify_image_label(args):
     nm, nf, ne, nc, msg, segments = 0, 0, 0, 0, '', []  # number (missing, found, empty, corrupt), message, segments
     try:
         # verify images
-        im = Image.open(im_file)
-        im.verify()  # PIL verify
-        shape = exif_size(im)  # image size
-        assert (shape[0] > 9) & (shape[1] > 9), f'image size {shape} <10 pixels'
-        assert im.format.lower() in IMG_FORMATS, f'invalid image format {im.format}'
-        if im.format.lower() in ('jpg', 'jpeg'):
-            with open(im_file, 'rb') as f:
-                f.seek(-2, 2)
-                if f.read() != b'\xff\xd9':  # corrupt JPEG
-                    ImageOps.exif_transpose(Image.open(im_file)).save(im_file, 'JPEG', subsampling=0, quality=100)
-                    msg = f'{prefix}WARNING: {im_file}: corrupt JPEG restored and saved'
+        im = io.imread(im_file) #todo - Update this
+        shape = im.shape
+        # assert (shape[0] > 9) & (shape[1] > 9), f'image size {shape} <10 pixels'
+        # assert im.format.lower() in IMG_FORMATS, f'invalid image format {im.format}'
+        # if im.format.lower() in ('jpg', 'jpeg'):
+        #     with open(im_file, 'rb') as f:
+        #         f.seek(-2, 2)
+        #         if f.read() != b'\xff\xd9':  # corrupt JPEG
+        #             ImageOps.exif_transpose(Image.open(im_file)).save(im_file, 'JPEG', subsampling=0, quality=100)
+        #             msg = f'{prefix}WARNING: {im_file}: corrupt JPEG restored and saved'
 
         # verify labels
         if os.path.isfile(lb_file):
